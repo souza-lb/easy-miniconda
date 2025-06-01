@@ -1,0 +1,165 @@
+#!/bin/bash
+
+# Easy Miniconda - install - Instalador do Miniconda 
+
+# Autor: Leonardo Bruno
+# Contato: souzalb@proton.me
+# Versão: 1.0
+# Data: 01/06/2025
+
+# Configurações
+MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
+INSTALL_DIR="$HOME/miniconda3"
+TEMP_DIR=$(mktemp -d /tmp/miniconda-XXXXX)
+CLEANUP_REQUIRED="yes"
+SCRIPT_NAME=$(basename "$MINICONDA_URL")
+
+# Mensagem inicial
+echo ""
+echo "--------------------------------------------"
+echo "  Instalação do Miniconda versão 1.0        "
+echo "--------------------------------------------"
+echo ""
+echo "1 - Verificar dependências"
+echo "2 - Verificar instalação existente"
+echo "3 - Baixar o instalador do Miniconda"
+echo "4 - Instalar em: '$INSTALL_DIR'"
+echo "5 - Configurar aliases no bashrc"
+echo "6 - Realizar limpeza automática"
+echo ""
+
+# Função para limpeza manual
+cleanup() {
+    if [[ $CLEANUP_REQUIRED == "yes" && -d "$TEMP_DIR" ]]; then
+        rm -rf "$TEMP_DIR"
+        echo "Limpeza de arquivos temporários realizada!"
+    fi
+}
+
+# Verifica dependências
+check_dependencies() {
+    local missing=()
+    for cmd in wget bash; do
+        if ! command -v $cmd >/dev/null; then
+            missing+=("$cmd")
+        fi
+    done
+
+    if [ ${#missing[@]} -gt 0 ]; then
+        echo "Erro: Os seguintes comandos são necessários:"
+        printf '%s\n' "${missing[@]}"
+        cleanup
+        exit 1
+    fi
+    
+    echo "Dependências verificadas: wget e bash encontrados."
+    return 0
+}
+
+# Verifica instalação existente
+check_existing_installation() {
+    if [ -d "$INSTALL_DIR" ]; then
+        echo "Aviso: O diretório de instalação $INSTALL_DIR já existe."
+        read -p "Deseja remover a instalação existente e prosseguir? [s/N]: " response < /dev/tty
+        if [[ ! "$response" =~ ^[Ss]$ ]]; then
+            echo "Instalação cancelada."
+            cleanup
+            exit 0
+        fi
+
+        read -p "Confirma a remoção permanente de $INSTALL_DIR? [s/N]: " confirm < /dev/tty
+        if [[ ! "$confirm" =~ ^[Ss]$ ]]; then
+            echo "Remoção cancelada. Instalação existente mantida."
+            cleanup
+            exit 0
+        fi
+
+        echo "Removendo instalação existente..."
+        if ! rm -rf "$INSTALL_DIR"; then
+            echo "Erro: Falha na remoção do diretório existente!"
+            cleanup
+            exit 1
+        fi
+        echo "Remoção concluída com sucesso!"
+    fi
+    return 0
+}
+
+# Download do instalador
+download_file() {
+    echo "Baixando instalador do Miniconda..."
+    if ! wget -q --show-progress "$MINICONDA_URL" -O "$TEMP_DIR/$SCRIPT_NAME"; then
+        echo "Erro: Falha no download do instalador!"
+        cleanup
+        exit 1
+    fi
+    echo "Download concluído com sucesso!"
+    return 0
+}
+
+# Instalação do Miniconda
+install_miniconda() {
+    echo "Instalando Miniconda..."
+    if ! bash "$TEMP_DIR/$SCRIPT_NAME" -b -u -p "$INSTALL_DIR"; then
+        echo "Erro: Falha durante a instalação!"
+        cleanup
+        exit 1
+    fi
+    echo "Miniconda instalado em: $INSTALL_DIR"
+    return 0
+}
+
+# Configura aliases
+configure_aliases() {
+    echo "Configurando ambiente..."
+    
+    local marker="# miniconda3 auto config"
+    local bashrc="$HOME/.bashrc"
+    
+    if grep -q "$marker" "$bashrc"; then
+        echo "Configuração já existe no .bashrc (nada alterado)"
+        return 0
+    fi
+
+    echo "" >> "$bashrc"
+    echo "$marker" >> "$bashrc"
+    echo "alias conda-on=\"source '$INSTALL_DIR/bin/activate'\"" >> "$bashrc"
+    echo "alias conda-off=\"conda deactivate\"" >> "$bashrc"
+    
+    echo "Configuração adicionada ao .bashrc:"
+    echo " $marker"
+    echo " alias conda-on=\"source '$INSTALL_DIR/bin/activate'\""
+    echo " alias conda-off=\"conda deactivate\""
+    return 0
+}
+
+# Função principal
+main() {
+    check_dependencies
+    check_existing_installation
+    download_file
+    install_miniconda
+    configure_aliases
+    
+    CLEANUP_REQUIRED="no"
+    cleanup
+    
+    echo ""
+    echo "--------------------------------------------"
+    echo "     Instalação concluída com sucesso !     "
+    echo "--------------------------------------------"
+    echo ""
+    echo "Próximos passos:"
+    echo "1. Recarregue o terminal ou execute:"
+    echo "   source ~/.bashrc"
+    echo "2. Para ativar o conda:"
+    echo "   conda-on"
+    echo "3. Para criar novo ambiente:"
+    echo "   conda create -n meu_ambiente"
+    echo "4. Para desativar o conda:"
+    echo "   conda-off"
+    echo ""
+}
+
+# Executa instalação
+main
