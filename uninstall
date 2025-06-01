@@ -1,0 +1,131 @@
+#!/bin/bash
+
+# Easy Miniconda - uninstall - Desinstalador do Miniconda
+
+# Autor: Leonardo Bruno
+# Contato: souzalb@proton.me
+# Versão: 1.0
+# Data: 01/06/2025
+
+# Nome do arquivo alvo
+TARGET="miniconda-installer"
+
+# Pasta de instalação do Miniconda
+INSTALL_DIR="$HOME/miniconda3"
+
+# Arquivo .bashrc
+FILE_BASHRC="$HOME/.bashrc"
+
+# Marcador de configuração
+MARKER="# miniconda3 auto config"
+
+# Mensagem inicial
+echo ""
+echo "--------------------------------------------"
+echo "  Desinstalação Miniconda versão 1.0        "
+echo "--------------------------------------------"
+echo ""
+echo "1 - Verificar instalação"
+echo "2 - Remover entradas do bashrc"
+echo "3 - Remover instalação principal"
+echo "4 - Finalizar desinstalação"
+echo ""
+
+# Verifica se instalação existe
+check_miniconda_exists() {
+    if [ ! -d "$INSTALL_DIR" ]; then
+        echo "Aviso: O Miniconda não está instalado no diretório padrão."
+        echo "Pasta não encontrada: $INSTALL_DIR"
+        echo ""
+        echo "Nenhuma ação será realizada."
+        exit 0
+    fi
+    echo "Instalação localizada: $INSTALL_DIR"
+    return 0
+}
+
+# Confirmação do usuário
+confirm_uninstall() {
+    read -p "Deseja realmente desinstalar o Miniconda? [s/N]: " confirm < /dev/tty
+    if [[ ! "$confirm" =~ ^[Ss]$ ]]; then
+        echo ""
+        echo "Desinstalação cancelada pelo usuário."
+        echo "Nenhuma alteração foi realizada."
+        exit 0
+    fi
+}
+
+# Função para calcular tamanho da pasta
+get_folder_size() {
+    if [ -d "${1:-}" ]; then
+        du -sh "$1" | cut -f1
+    else
+        echo "0K"
+    fi
+}
+
+# Remove configurações do bashrc
+remove_bashrc_entries() {
+    echo "Removendo configurações do .bashrc..."
+    
+    if grep -q "$MARKER" "$FILE_BASHRC"; then
+        # Cria backup antes de modificar
+        cp "$FILE_BASHRC" "${FILE_BASHRC}.backup-miniconda"
+        
+        # Remove as linhas relacionadas ao Miniconda
+        sed -i "/$MARKER/d" "$FILE_BASHRC"
+        sed -i '/alias conda-on=/d' "$FILE_BASHRC"
+        sed -i '/alias conda-off=/d' "$FILE_BASHRC"
+        
+        echo "Configurações removidas do .bashrc!"
+        echo "Backup salvo em: ${FILE_BASHRC}.backup-miniconda"
+    else
+        echo "Nenhuma configuração do Miniconda encontrada no .bashrc"
+    fi
+    return 0
+}
+
+# Remove instalação principal
+remove_installation_dir() {
+    folder_size=$(get_folder_size "$INSTALL_DIR")
+    echo "Tamanho da instalação: $folder_size"
+    echo "Atenção! Esta operação é irreversível!"
+    
+    read -p "Confirme a remoção do Miniconda? [s/N]: " confirm_dir < /dev/tty
+    if [[ ! "$confirm_dir" =~ ^[Ss]$ ]]; then
+        echo "Remoção da instalação principal cancelada."
+        return 0
+    fi
+
+    echo "Removendo instalação principal..."
+    if rm -rf "$INSTALL_DIR"; then
+        echo "Remoção concluída: $INSTALL_DIR"
+    else
+        echo "Erro: Falha na remoção do diretório principal!"
+        return 1
+    fi
+    return 0
+}
+
+# Função principal
+main() {
+    check_miniconda_exists
+    confirm_uninstall
+    remove_bashrc_entries
+    remove_installation_dir
+
+    echo ""
+    echo "--------------------------------------------"
+    echo "   Desinstalação concluída com sucesso !    "
+    echo "--------------------------------------------"
+    echo ""
+    echo "Recomendações:"
+    echo "1. Recarregue seu terminal com:"
+    echo "   source ~/.bashrc"
+    echo "2. Verifique se todas as entradas foram removidas"
+    echo ""
+    echo "Suporte: souzalb@proton.me"
+}
+
+# Executa desinstalação
+main
